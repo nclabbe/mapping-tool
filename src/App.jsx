@@ -7,8 +7,9 @@
  * - Excel import/export functionality
  * - Bulk editing and deletion capabilities
  * - Real-time inline mapping with instant feedback
+ * - Notes field for all mappings
  * 
- * @version 1.0.0
+ * @version 1.1.0
  */
 
 import React, { useState } from 'react';
@@ -56,9 +57,6 @@ export default function AppointmentMappingForm() {
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryValues, setNewCategoryValues] = useState('');
 
-  /**
-   * Import Excel file with appointment data and categories
-   */
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
     if (!file) return;
@@ -89,9 +87,6 @@ export default function AppointmentMappingForm() {
     }
   };
 
-  /**
-   * Export empty Excel template for data import
-   */
   const exportTemplate = () => {
     const wb = XLSX.utils.book_new();
 
@@ -112,9 +107,6 @@ export default function AppointmentMappingForm() {
     showAlertPopup('Empty template exported! Fill in the data and import it back to start mapping.');
   };
 
-  /**
-   * Export complete mapping configuration to Excel
-   */
   const exportMappingConfiguration = () => {
     if (!practiceName) {
       showAlertPopup('Please enter a practice name before exporting');
@@ -123,47 +115,46 @@ export default function AppointmentMappingForm() {
 
     const wb = XLSX.utils.book_new();
 
-    // Export mapped appointment types
     const mappedTypesData = mappedAppointmentTypes.map(item => {
       const row = { type: item.value };
       categories.forEach(cat => {
         row[cat.Category] = item.categories?.[cat.Category] || '';
       });
+      row.notes = item.notes || '';
       return row;
     });
     const typeSheet = XLSX.utils.json_to_sheet(mappedTypesData);
     
-    // Export mapped appointment purposes
     const mappedPurposesData = mappedAppointmentPurposes.map(item => {
       const row = { purpose: item.value };
       categories.forEach(cat => {
         row[cat.Category] = item.categories?.[cat.Category] || '';
       });
+      row.notes = item.notes || '';
       return row;
     });
     const purposeSheet = XLSX.utils.json_to_sheet(mappedPurposesData);
     
-    // Export mapped doctors
     const mappedDoctorsData = mappedDoctors.map(item => {
       const row = { doctor: item.value };
       categories.forEach(cat => {
         row[cat.Category] = item.categories?.[cat.Category] || '';
       });
+      row.notes = item.notes || '';
       return row;
     });
     const doctorSheet = XLSX.utils.json_to_sheet(mappedDoctorsData);
     
-    // Export mapped locations
     const mappedLocationsData = mappedLocations.map(item => {
       const row = { location: item.value };
       categories.forEach(cat => {
         row[cat.Category] = item.categories?.[cat.Category] || '';
       });
+      row.notes = item.notes || '';
       return row;
     });
     const locationSheet = XLSX.utils.json_to_sheet(mappedLocationsData);
     
-    // Export categories
     const categorySheet = XLSX.utils.json_to_sheet(categories);
 
     XLSX.utils.book_append_sheet(wb, typeSheet, 'Appointment Type');
@@ -180,34 +171,22 @@ export default function AppointmentMappingForm() {
     showAlertPopup(`Mapping configuration exported successfully!\nFile: ${fileName}\nTotal mappings: ${totalMappings}`);
   };
 
-  /**
-   * Show alert popup dialog
-   */
   const showAlertPopup = (message) => {
     setAlertMessage(message);
     setShowAlert(true);
   };
 
-  /**
-   * Close alert popup
-   */
   const closeAlert = () => {
     setShowAlert(false);
     setAlertMessage('');
   };
 
-  /**
-   * Show confirmation dialog with custom action
-   */
   const showConfirmation = (message, onConfirm) => {
     setConfirmMessage(message);
     setConfirmAction(() => onConfirm);
     setShowConfirmDialog(true);
   };
 
-  /**
-   * Handle confirmation dialog confirm
-   */
   const handleConfirm = () => {
     if (confirmAction) {
       confirmAction();
@@ -216,25 +195,16 @@ export default function AppointmentMappingForm() {
     setConfirmAction(null);
   };
 
-  /**
-   * Handle confirmation dialog cancel
-   */
   const handleCancel = () => {
     setShowConfirmDialog(false);
     setConfirmAction(null);
   };
 
-  /**
-   * Get category options from category definition
-   */
   const getCategoryOptions = (categoryName) => {
     const category = categories.find(c => c.Category === categoryName);
     return category ? category.Values.split(',').map(v => v.trim()) : [];
   };
 
-  /**
-   * Toggle item selection
-   */
   const toggleSelectItem = (value) => {
     setSelectedItems(prev => 
       prev.includes(value) 
@@ -243,9 +213,6 @@ export default function AppointmentMappingForm() {
     );
   };
 
-  /**
-   * Toggle select all items
-   */
   const toggleSelectAll = () => {
     const currentData = getCurrentData();
     const allItems = [...currentData.available];
@@ -256,9 +223,6 @@ export default function AppointmentMappingForm() {
     }
   };
 
-  /**
-   * Open mass edit modal
-   */
   const openMassEdit = () => {
     if (selectedItems.length === 0) {
       showAlertPopup('Please select at least one item to edit');
@@ -268,16 +232,12 @@ export default function AppointmentMappingForm() {
     setShowMassEditModal(true);
   };
 
-  /**
-   * Apply mass edit to selected items
-   */
   const applyMassEdit = () => {
     if (selectedItems.length === 0) {
       showAlertPopup('No items selected');
       return;
     }
 
-    // Get current mapped list
     let currentMapped = [];
     switch(activeTab) {
       case 'appointmentTypes':
@@ -292,37 +252,38 @@ export default function AppointmentMappingForm() {
       case 'locations':
         currentMapped = [...mappedLocations];
         break;
-		default:
-		break;
+      default:
+        break;
     }
 
-    // Process each selected item
     selectedItems.forEach(value => {
       const existingIndex = currentMapped.findIndex(m => m.value === value);
       
       if (existingIndex >= 0) {
-        // Update existing mapping
         const updatedCategories = { ...currentMapped[existingIndex].categories };
         Object.entries(massEditCategories).forEach(([cat, val]) => {
-          if (val !== '') {
+          if (cat !== 'notes' && val !== '') {
             updatedCategories[cat] = val;
           }
         });
         currentMapped[existingIndex] = {
           ...currentMapped[existingIndex],
-          categories: updatedCategories
+          categories: updatedCategories,
+          notes: massEditCategories.notes !== undefined && massEditCategories.notes !== '' 
+            ? massEditCategories.notes 
+            : currentMapped[existingIndex].notes || ''
         };
       } else {
-        // Create new mapping
-        const newMapping = {
+        const newCategories = { ...massEditCategories };
+        delete newCategories.notes;
+        currentMapped.push({
           value: value,
-          categories: { ...massEditCategories }
-        };
-        currentMapped.push(newMapping);
+          categories: newCategories,
+          notes: massEditCategories.notes || ''
+        });
       }
     });
 
-    // Update the state with the new mapped list
     switch(activeTab) {
       case 'appointmentTypes':
         setMappedAppointmentTypes(currentMapped);
@@ -336,8 +297,8 @@ export default function AppointmentMappingForm() {
       case 'locations':
         setMappedLocations(currentMapped);
         break;
-		default:
-		break;
+      default:
+        break;
     }
 
     setShowMassEditModal(false);
@@ -345,9 +306,6 @@ export default function AppointmentMappingForm() {
     showAlertPopup(`Successfully mapped/updated ${selectedItems.length} item(s)`);
   };
 
-  /**
-   * Mass delete selected items
-   */
   const massDelete = () => {
     if (!selectedItems || selectedItems.length === 0) {
       showAlertPopup('Please select at least one item to delete');
@@ -359,7 +317,6 @@ export default function AppointmentMappingForm() {
     showConfirmation(
       `Are you sure you want to delete ${itemCount} selected item(s)? This will remove them from the list.`,
       () => {
-        // Remove from mapped lists and available lists
         if (activeTab === 'appointmentTypes') {
           setMappedAppointmentTypes(mappedAppointmentTypes.filter(m => !selectedItems.includes(m.value)));
           setAvailableAppointmentTypes(availableAppointmentTypes.filter(v => !selectedItems.includes(v)));
@@ -380,14 +337,10 @@ export default function AppointmentMappingForm() {
     );
   };
 
-  /**
-   * Delete individual mapping
-   */
   const deleteMapping = (value) => {
     showConfirmation(
       `Are you sure you want to delete "${value}"? This will remove it from the list.`,
       () => {
-        // Remove from both mapped and available lists
         switch(activeTab) {
           case 'appointmentTypes':
             setMappedAppointmentTypes(mappedAppointmentTypes.filter(m => m.value !== value));
@@ -405,16 +358,13 @@ export default function AppointmentMappingForm() {
             setMappedLocations(mappedLocations.filter(m => m.value !== value));
             setAvailableLocations(availableLocations.filter(v => v !== value));
             break;
-			default:
-			break;
+          default:
+            break;
         }
       }
     );
   };
 
-  /**
-   * Add new category
-   */
   const addCategory = () => {
     if (!newCategoryName.trim()) {
       showAlertPopup('Please enter a category name');
@@ -441,9 +391,6 @@ export default function AppointmentMappingForm() {
     showAlertPopup(`Category "${newCategory.Category}" added successfully!`);
   };
 
-  /**
-   * Delete category and remove from all mappings
-   */
   const deleteCategory = (categoryName) => {
     showConfirmation(
       `Are you sure you want to delete the category "${categoryName}"? This will remove it from all mappings.`,
@@ -468,9 +415,6 @@ export default function AppointmentMappingForm() {
     );
   };
 
-  /**
-   * Edit category values
-   */
   const editCategoryValues = (categoryName, currentValues) => {
     const newValues = prompt(`Edit values for "${categoryName}" (comma-separated):`, currentValues);
     if (newValues !== null && newValues.trim() !== '') {
@@ -483,9 +427,6 @@ export default function AppointmentMappingForm() {
     }
   };
 
-  /**
-   * Save all configuration (logs to console)
-   */
   const saveAllConfiguration = () => {
     if (!practiceName) {
       setPracticeNameError(true);
@@ -506,7 +447,6 @@ export default function AppointmentMappingForm() {
     const totalMappings = mappedAppointmentTypes.length + mappedAppointmentPurposes.length + 
                           mappedDoctors.length + mappedLocations.length;
     
-    // Configuration saved to console for integration purposes
     console.log('Saved Configuration:', config);
     
     setConfigSaved(true);
@@ -515,9 +455,6 @@ export default function AppointmentMappingForm() {
     showAlertPopup(`✓ Configuration saved successfully!\n\nPractice Name: ${practiceName}\nTotal Mappings: ${totalMappings}\n  - Appointment Types: ${mappedAppointmentTypes.length}\n  - Appointment Purposes: ${mappedAppointmentPurposes.length}\n  - Doctors/Providers: ${mappedDoctors.length}\n  - Locations: ${mappedLocations.length}`);
   };
 
-  /**
-   * Reset all mappings (keep imported data and categories)
-   */
   const resetMappings = () => {
     showConfirmation(
       'Are you sure you want to reset all mappings? This will clear all category assignments but keep your imported data and categories.',
@@ -532,9 +469,6 @@ export default function AppointmentMappingForm() {
     );
   };
 
-  /**
-   * Reset entire form (clear all data)
-   */
   const resetForm = () => {
     showConfirmation(
       'Are you sure you want to reset the entire form? This will clear ALL data including imported items, mappings, and categories. This action cannot be undone!',
@@ -558,9 +492,6 @@ export default function AppointmentMappingForm() {
     );
   };
 
-  /**
-   * Get current tab data
-   */
   const getCurrentData = () => {
     switch(activeTab) {
       case 'appointmentTypes':
@@ -600,8 +531,7 @@ export default function AppointmentMappingForm() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
-      {/* Confirmation Dialog */}
-      {showConfirmDialog && (
+	{showConfirmDialog && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
             <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Action</h3>
@@ -624,7 +554,6 @@ export default function AppointmentMappingForm() {
         </div>
       )}
 
-      {/* Alert Dialog */}
       {showAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
@@ -641,7 +570,6 @@ export default function AppointmentMappingForm() {
         </div>
       )}
 
-      {/* Mass Edit Modal */}
       {showMassEditModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-2xl w-full mx-4 max-h-[90vh] overflow-y-auto">
@@ -651,7 +579,7 @@ export default function AppointmentMappingForm() {
             <p className="text-sm text-gray-600 mb-4">
               Set category values for all selected items. This will create mappings for unmapped items and update existing ones.
             </p>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+            <div className="space-y-4 mb-6">
               {categories.map(category => (
                 <div key={category.Category}>
                   <label className="block text-sm font-medium text-gray-700 mb-2">
@@ -672,6 +600,22 @@ export default function AppointmentMappingForm() {
                   </select>
                 </div>
               ))}
+              <div>
+                <label className="block text-sm font-medium text-gray-700 mb-2">
+                  Notes (Optional)
+                </label>
+                <textarea
+                  value={massEditCategories.notes || ''}
+                  onChange={(e) => setMassEditCategories({ 
+                    ...massEditCategories, 
+                    notes: e.target.value 
+                  })}
+                  placeholder="Add notes for all selected items..."
+                  rows={3}
+                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:outline-none focus:ring-2 focus:ring-blue-500"
+                />
+                <p className="text-xs text-gray-500 mt-1">Leave empty to keep existing notes unchanged</p>
+              </div>
             </div>
             <div className="flex gap-3">
               <button
@@ -691,7 +635,6 @@ export default function AppointmentMappingForm() {
         </div>
       )}
 
-      {/* Add Category Modal */}
       {showAddCategoryModal && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
@@ -745,7 +688,6 @@ export default function AppointmentMappingForm() {
       )}
       
       <div className="max-w-7xl mx-auto">
-        {/* Header Section */}
         <div className="bg-white rounded-lg shadow-md p-6 mb-6">
           <h1 className="text-3xl font-bold text-gray-800 mb-4">
             Integration Mapping Configuration
@@ -840,7 +782,6 @@ export default function AppointmentMappingForm() {
           </div>
         </div>
 
-        {/* Main Content Area */}
         <div className="bg-white rounded-lg shadow-md mb-6">
           <div className="flex border-b overflow-x-auto">
             <button
@@ -872,7 +813,6 @@ export default function AppointmentMappingForm() {
           </div>
 
           {activeView === 'categories' ? (
-            // Category Management View
             <div className="p-6">
               <div className="flex justify-between items-center mb-6">
                 <h2 className="text-xl font-semibold text-gray-700">Manage Categories</h2>
@@ -938,7 +878,6 @@ export default function AppointmentMappingForm() {
               )}
             </div>
           ) : (
-            // Item Mappings View
             <>
               <div className="flex border-b overflow-x-auto bg-gray-50">
                 <button
@@ -1050,6 +989,7 @@ export default function AppointmentMappingForm() {
                               {category.Category}
                             </th>
                           ))}
+                          <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Notes</th>
                           <th className="px-4 py-3 text-left text-sm font-medium text-gray-700">Actions</th>
                         </tr>
                       </thead>
@@ -1092,7 +1032,6 @@ export default function AppointmentMappingForm() {
                                     onChange={(e) => {
                                       const newValue = e.target.value;
                                       if (existingMapping) {
-                                        // Update existing mapping
                                         const updatedCategories = { ...existingMapping.categories, [category.Category]: newValue };
                                         switch(activeTab) {
                                           case 'appointmentTypes':
@@ -1115,14 +1054,14 @@ export default function AppointmentMappingForm() {
                                               m.value === value ? { ...m, categories: updatedCategories } : m
                                             ));
                                             break;
-											default:
-											break;
+                                          default:
+                                            break;
                                         }
                                       } else {
-                                        // Create new mapping
                                         const newMapping = {
                                           value: value,
-                                          categories: { [category.Category]: newValue }
+                                          categories: { [category.Category]: newValue },
+                                          notes: ''
                                         };
                                         switch(activeTab) {
                                           case 'appointmentTypes':
@@ -1137,8 +1076,8 @@ export default function AppointmentMappingForm() {
                                           case 'locations':
                                             setMappedLocations([...mappedLocations, newMapping]);
                                             break;
-											default:
-											break;
+                                          default:
+                                            break;
                                         }
                                       }
                                     }}
@@ -1151,6 +1090,65 @@ export default function AppointmentMappingForm() {
                                   </select>
                                 </td>
                               ))}
+                              <td className="px-4 py-3">
+                                <input
+                                  type="text"
+                                  value={existingMapping?.notes || ''}
+                                  onChange={(e) => {
+                                    const newNote = e.target.value;
+                                    if (existingMapping) {
+                                      switch(activeTab) {
+                                        case 'appointmentTypes':
+                                          setMappedAppointmentTypes(mappedAppointmentTypes.map(m => 
+                                            m.value === value ? { ...m, notes: newNote } : m
+                                          ));
+                                          break;
+                                        case 'appointmentPurposes':
+                                          setMappedAppointmentPurposes(mappedAppointmentPurposes.map(m => 
+                                            m.value === value ? { ...m, notes: newNote } : m
+                                          ));
+                                          break;
+                                        case 'doctors':
+                                          setMappedDoctors(mappedDoctors.map(m => 
+                                            m.value === value ? { ...m, notes: newNote } : m
+                                          ));
+                                          break;
+                                        case 'locations':
+                                          setMappedLocations(mappedLocations.map(m => 
+                                            m.value === value ? { ...m, notes: newNote } : m
+                                          ));
+                                          break;
+                                        default:
+                                          break;
+                                      }
+                                    } else if (newNote) {
+                                      const newMapping = {
+                                        value: value,
+                                        categories: {},
+                                        notes: newNote
+                                      };
+                                      switch(activeTab) {
+                                        case 'appointmentTypes':
+                                          setMappedAppointmentTypes([...mappedAppointmentTypes, newMapping]);
+                                          break;
+                                        case 'appointmentPurposes':
+                                          setMappedAppointmentPurposes([...mappedAppointmentPurposes, newMapping]);
+                                          break;
+                                        case 'doctors':
+                                          setMappedDoctors([...mappedDoctors, newMapping]);
+                                          break;
+                                        case 'locations':
+                                          setMappedLocations([...mappedLocations, newMapping]);
+                                          break;
+                                        default:
+                                          break;
+                                      }
+                                    }
+                                  }}
+                                  placeholder="Add notes..."
+                                  className="w-full px-2 py-1 border border-gray-300 rounded text-sm focus:outline-none focus:ring-2 focus:ring-blue-500"
+                                />
+                              </td>
                               <td className="px-4 py-3">
                                 <button
                                   onClick={() => deleteMapping(value)}
@@ -1172,7 +1170,6 @@ export default function AppointmentMappingForm() {
           )}
         </div>
 
-        {/* Success Message */}
         {configSaved && (
           <div className="bg-green-50 border border-green-200 rounded-lg p-4 mb-6">
             <div className="text-green-800 font-medium mb-2">✓ Configuration saved successfully!</div>
