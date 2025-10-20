@@ -23,6 +23,9 @@ export default function App() {
   const [showAddCategoryModal, setShowAddCategoryModal] = useState(false);
   const [newCategoryName, setNewCategoryName] = useState('');
   const [newCategoryValues, setNewCategoryValues] = useState('');
+  const [showConfirmDialog, setShowConfirmDialog] = useState(false);
+  const [confirmMessage, setConfirmMessage] = useState('');
+  const [confirmAction, setConfirmAction] = useState(null);
 
   const handleFileUpload = async (e) => {
     const file = e.target.files[0];
@@ -218,6 +221,50 @@ export default function App() {
     setSelectedItems([]);
   };
 
+  const showConfirmation = (message, onConfirm) => {
+    setConfirmMessage(message);
+    setConfirmAction(() => onConfirm);
+    setShowConfirmDialog(true);
+  };
+
+  const resetMappings = () => {
+    showConfirmation(
+      'Are you sure you want to reset all mappings? This will clear all category assignments but keep your imported data and categories.',
+      () => {
+        setMappedAppointmentTypes([]);
+        setMappedAppointmentPurposes([]);
+        setMappedDoctors([]);
+        setMappedLocations([]);
+        setSelectedItems([]);
+        setAlertMessage('All mappings have been reset successfully!');
+        setShowAlert(true);
+        setShowConfirmDialog(false);
+      }
+    );
+  };
+
+  const resetForm = () => {
+    showConfirmation(
+      'Are you sure you want to reset the entire form? This will clear ALL data including imported items, mappings, and categories. This action cannot be undone!',
+      () => {
+        setPracticeName('');
+        setAvailableAppointmentTypes([]);
+        setAvailableAppointmentPurposes([]);
+        setAvailableDoctors([]);
+        setAvailableLocations([]);
+        setMappedAppointmentTypes([]);
+        setMappedAppointmentPurposes([]);
+        setMappedDoctors([]);
+        setMappedLocations([]);
+        setCategories([]);
+        setSelectedItems([]);
+        setAlertMessage('Form has been completely reset!');
+        setShowAlert(true);
+        setShowConfirmDialog(false);
+      }
+    );
+  };
+
   const getData = () => {
     if (activeTab === 'appointmentTypes') return { available: availableAppointmentTypes, mapped: mappedAppointmentTypes, label: 'Appointment Type' };
     if (activeTab === 'appointmentPurposes') return { available: availableAppointmentPurposes, mapped: mappedAppointmentPurposes, label: 'Appointment Purpose' };
@@ -231,6 +278,34 @@ export default function App() {
 
   return (
     <div className="min-h-screen bg-gray-50 p-6">
+      {showConfirmDialog && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
+          <div className="bg-white rounded-lg shadow-xl p-6 max-w-md w-full mx-4">
+            <h3 className="text-lg font-semibold text-gray-800 mb-4">Confirm Action</h3>
+            <p className="text-gray-700 mb-6">{confirmMessage}</p>
+            <div className="flex gap-3">
+              <button
+                onClick={() => {
+                  if (confirmAction) confirmAction();
+                }}
+                className="flex-1 px-4 py-2 bg-red-600 text-white rounded-md hover:bg-red-700 font-medium"
+              >
+                Yes, Proceed
+              </button>
+              <button
+                onClick={() => {
+                  setShowConfirmDialog(false);
+                  setConfirmAction(null);
+                }}
+                className="flex-1 px-4 py-2 bg-gray-300 text-gray-700 rounded-md hover:bg-gray-400 font-medium"
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showAlert && (
         <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
           <div className="bg-white rounded-lg p-6 max-w-md w-full mx-4">
@@ -341,6 +416,13 @@ export default function App() {
             </button>
             <button onClick={exportConfig} className="flex items-center gap-2 px-4 py-2 bg-purple-600 text-white rounded hover:bg-purple-700">
               <Download size={20} />Export Config
+            </button>
+            <div className="flex-1"></div>
+            <button onClick={resetMappings} className="flex items-center gap-2 px-4 py-2 bg-orange-600 text-white rounded hover:bg-orange-700">
+              <X size={20} />Reset Mappings
+            </button>
+            <button onClick={resetForm} className="flex items-center gap-2 px-4 py-2 bg-red-600 text-white rounded hover:bg-red-700">
+              <Trash2 size={20} />Reset Form
             </button>
           </div>
         </div>
