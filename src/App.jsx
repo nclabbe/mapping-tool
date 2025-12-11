@@ -64,40 +64,66 @@ export default function App() {
   const exportConfig = () => {
     if (!practiceName) { setAlertMessage('Enter practice name first'); setShowAlert(true); return; }
     const wb = XLSX.utils.book_new();
-    const types = mappedAppointmentTypes.map(item => {
-      const row = { id: item.id || '', type: item.value };
-      categories.forEach(cat => { row[cat.Category] = item.categories?.[cat.Category] || ''; });
-      row['Cancel/No-Show Rules'] = item.cancelNoShowRules ? 'Yes' : 'No';
-      row['Booking Rule'] = item.bookingRule ? 'Yes' : 'No';
-      row.notes = item.notes || '';
+    
+    // Export ALL appointment types (mapped and unmapped)
+    const types = availableAppointmentTypes.map(item => {
+      const itemName = typeof item === 'string' ? item : item.name;
+      const itemId = typeof item === 'string' ? '' : item.id;
+      const mapping = mappedAppointmentTypes.find(m => m.value === itemName);
+      const row = { id: itemId, type: itemName };
+      categories.forEach(cat => { row[cat.Category] = mapping?.categories?.[cat.Category] || ''; });
+      row['Cancel/No-Show Rules'] = mapping?.cancelNoShowRules ? 'Yes' : 'No';
+      row['Booking Rule'] = mapping?.bookingRule ? 'Yes' : 'No';
+      row.notes = mapping?.notes || '';
       return row;
     });
-    const purposes = mappedAppointmentPurposes.map(item => {
-      const row = { id: item.id || '', purpose: item.value };
-      categories.forEach(cat => { row[cat.Category] = item.categories?.[cat.Category] || ''; });
-      row['Cancel/No-Show Rules'] = item.cancelNoShowRules ? 'Yes' : 'No';
-      row['Booking Rule'] = item.bookingRule ? 'Yes' : 'No';
-      row.notes = item.notes || '';
+    
+    // Export ALL appointment purposes (mapped and unmapped)
+    const purposes = availableAppointmentPurposes.map(item => {
+      const itemName = typeof item === 'string' ? item : item.name;
+      const itemId = typeof item === 'string' ? '' : item.id;
+      const mapping = mappedAppointmentPurposes.find(m => m.value === itemName);
+      const row = { id: itemId, purpose: itemName };
+      categories.forEach(cat => { row[cat.Category] = mapping?.categories?.[cat.Category] || ''; });
+      row['Cancel/No-Show Rules'] = mapping?.cancelNoShowRules ? 'Yes' : 'No';
+      row['Booking Rule'] = mapping?.bookingRule ? 'Yes' : 'No';
+      row.notes = mapping?.notes || '';
       return row;
     });
-    const docs = mappedDoctors.map(item => {
-      const row = { id: item.id || '', doctor: item.value };
-      categories.forEach(cat => { row[cat.Category] = item.categories?.[cat.Category] || ''; });
-      row.notes = item.notes || '';
+    
+    // Export ALL doctors (mapped and unmapped)
+    const docs = availableDoctors.map(item => {
+      const itemName = typeof item === 'string' ? item : item.name;
+      const itemId = typeof item === 'string' ? '' : item.id;
+      const mapping = mappedDoctors.find(m => m.value === itemName);
+      const row = { id: itemId, doctor: itemName };
+      categories.forEach(cat => { row[cat.Category] = mapping?.categories?.[cat.Category] || ''; });
+      row.notes = mapping?.notes || '';
       return row;
     });
-    const locs = mappedLocations.map(item => {
-      const row = { id: item.id || '', location: item.value };
-      categories.forEach(cat => { row[cat.Category] = item.categories?.[cat.Category] || ''; });
-      row.notes = item.notes || '';
+    
+    // Export ALL locations (mapped and unmapped)
+    const locs = availableLocations.map(item => {
+      const itemName = typeof item === 'string' ? item : item.name;
+      const itemId = typeof item === 'string' ? '' : item.id;
+      const mapping = mappedLocations.find(m => m.value === itemName);
+      const row = { id: itemId, location: itemName };
+      categories.forEach(cat => { row[cat.Category] = mapping?.categories?.[cat.Category] || ''; });
+      row.notes = mapping?.notes || '';
       return row;
     });
+    
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(types), 'Appointment Type');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(purposes), 'Appointment Purpose');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(docs), 'Doctor');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(locs), 'Location');
     XLSX.utils.book_append_sheet(wb, XLSX.utils.json_to_sheet(categories), 'Categories');
     XLSX.writeFile(wb, `${practiceName.replace(/[^a-z0-9]/gi, '_')}_config.xlsx`);
+    
+    const totalItems = availableAppointmentTypes.length + availableAppointmentPurposes.length + availableDoctors.length + availableLocations.length;
+    const totalMapped = mappedAppointmentTypes.length + mappedAppointmentPurposes.length + mappedDoctors.length + mappedLocations.length;
+    setAlertMessage(`Configuration exported!\n\nTotal items: ${totalItems}\nMapped items: ${totalMapped}\nUnmapped items: ${totalItems - totalMapped}`);
+    setShowAlert(true);
   };
 
   const updateMapping = (value, categoryName, newValue, itemId) => {
